@@ -1,0 +1,76 @@
+---
+import { getCollection, render } from "astro:content";
+// leer variables de entorno .env
+import { SHOW_BUY_BUTTON } from "astro:env/server";
+import Layout from "../../layouts/Layout.astro";
+import AmazonLogo from "../../components/AmazonLogo.astro";
+import BookScore from "../../components/BookScore.astro";
+import BuyButton from "../../components/BuyButton.astro";
+
+export async function getStaticPaths() {
+  const books = await getCollection("books");
+
+  return books.map((book) => ({
+    params: { id: book.slug },
+    props: { book },
+  }));
+}
+
+const { book } = Astro.props;
+const { data, slug } = book;
+const { title, author, img, readtime, description, buy } = data;
+// renderizar el contenido del libro MD
+const { Content } = await render(book);
+
+export const prerender = true;
+---
+
+<Layout title={`${title} - David Books`}>
+  <div class="flex gap-12">
+    <aside class="flex flex-col items-center gap-4">
+      <a href="/" class="hover:underline opacity-70">⬅️ Volver atrás</a>
+      <img
+        transition:name={`img-${slug}`}
+        class="rounded w-72 h-auto"
+        src={`/${img}`}
+        alt={title}
+      />
+      <!-- server:defer - queremos que el componente se renderize en el servidor y configurar el output en astro.config.mjs output: 'server' -->
+      <BookScore server:defer id={slug}>
+        <!-- fallbacks -->
+        <span slot="fallback" class="text-xs opacity-70"
+          >Cargando puntuación...</span
+        >
+      </BookScore>
+      <!-- enlace para comprar -->
+      {
+        // pasar objeto de compra donde están las dos tiendas
+        SHOW_BUY_BUTTON && <BuyButton server:defer buy={buy} />
+      }
+    </aside>
+    <main class="max-w-3xl">
+      <h1 transition:name={`title-${slug}`} class="text-4xl font-bold mb-4">
+        {title}
+      </h1>
+      <div class="prose prose-invert">
+        <Content />
+      </div>
+    </main>
+  </div>
+</Layout>
+
+<!-- <script>
+  import { SCORE_API_ENDPOINT } from "astro:env/client";
+
+  const scoreElement = document.querySelector("#score");
+
+  fetch(SCORE_API_ENDPOINT)
+    .then((res) => res.text())
+    .then((scoreValue) => {
+      if (scoreElement) {
+        scoreElement.innerHTML = `⭐ Puntuación: ${scoreValue.trim()}/5`;
+      }
+    });
+</script> -->
+
+<!-- https://github.com/tailwindlabs/tailwindcss-typography -->
